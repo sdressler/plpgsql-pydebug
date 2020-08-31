@@ -15,6 +15,7 @@ typically install it from the main PG repository.
 
 # Shortcomings aka the list of shame
 
+* Output could be prettier / more readable.
 * No tests.
 * Error handling might be incomplete, it could bail out and leave connections open.
 * `source`, `br.set` commands do not yet work with other functions than the
