@@ -1,11 +1,11 @@
-
-import sys
+'''
+This is the main debugger module. It receives commands to execute and
+distributes them accordingly to either the target or the proxy.
+'''
 
 from collections import namedtuple
 from functools import reduce as f_reduce
 from pprint import pprint
-from threading import Thread, Event
-from typing import List, Optional, Tuple
 
 from loguru import logger
 
@@ -33,6 +33,9 @@ COMMANDS = {
 
 
 def rgetattr(obj, attr, *args):
+    '''
+    Get an attribute recursively. For instance `self.foo.bar` returns `bar`.
+    '''
     def _getattr(obj, attr):
         return getattr(obj, attr, *args)
     return f_reduce(_getattr, [obj] + attr.split('.'))
@@ -43,19 +46,25 @@ class Debugger:
     This is the main class for PL/pgSQL debugging.
     '''
     def __init__(self, dsn: str):
-        self.db = DB(dsn)
-        self.db.try_load_extension()
+        self.database = DB(dsn)
+        self.database.try_load_extension()
 
         self.proxy = None
         self.target = None
 
     def active_session(self):
+        '''
+        Check if a debugging session is active or not.
+        '''
         return (self.proxy) and (self.target)
 
     def start_debug_session(self, *args):
+        '''
+        Start a new debugging session from scratch.
+        '''
         func_call = args[0]
 
-        self.target = Target(self.db.dsn)
+        self.target = Target(self.database.dsn)
         if not self.target.start(func_call):
             logger.error('Could not start target')
             self.target.cleanup()
@@ -64,11 +73,14 @@ class Debugger:
 
         logger.debug('Started target')
 
-        self.proxy = Proxy(self.db.dsn)
+        self.proxy = Proxy(self.database.dsn)
         self.proxy.attach(self.target.port)
         logger.debug('Proxy started')
 
     def stop_debug_session(self):
+        '''
+        Stop the current debugging session.
+        '''
         if self.active_session():
             self.proxy.abort()
             self.target.wait_for_shutdown()
@@ -78,9 +90,15 @@ class Debugger:
         self.target = None
 
     def _get_source_wrapper(self) -> str:
+        '''
+        Helper function to get the source for the current target function.
+        '''
         return self.proxy.get_source(self.target.oid)
 
     def _set_breakpoint_wrapper(self, *args):
+        '''
+        Helper function to set a breakpoint in the current target function.
+        '''
         try:
             line_number = args[0]
             return self.proxy.set_breakpoint(self.target.oid, line_number)
@@ -89,6 +107,9 @@ class Debugger:
             logger.error('Could not get breakpoint line number.')
 
     def _run_command(self, command_name, args):
+        '''
+        Execute a debugging command.
+        '''
         if command_name in ('abort', 'exit', 'quit'):
             command_name = 'stop'
 
