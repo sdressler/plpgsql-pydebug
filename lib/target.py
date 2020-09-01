@@ -1,9 +1,11 @@
-
-import time
+'''
+This module controls the debugging target. It is responsible for setting the
+initial breakpoint and starting the function to be debugged.
+'''
 
 from collections import namedtuple
 from queue import Queue
-from threading import Event, Thread
+from threading import Thread
 from typing import List, Optional, Tuple
 
 from loguru import logger
@@ -20,16 +22,23 @@ class Target:
     This is the target. It controls/contains the code to be debugged.
     '''
     def __init__(self, dsn: str):
-        self.db = DB(dsn, is_async=True)
+        self.database = DB(dsn, is_async=True)
         self.notice_queue = Queue()
         self.oid = None
         self.executor = None
         self.port = None
 
     def cleanup(self):
-        self.db.cleanup()
+        '''
+        Cleanup routine for the target.
+        '''
+        self.database.cleanup()
 
     def get_notices(self) -> List[str]:
+        '''
+        Get all notices the target might have. Reads from an internal queue,
+        does not use the DB itself since it is likely blocked.
+        '''
         notices = []
         while not self.notice_queue.empty():
             notices.append(self.notice_queue.get())
@@ -41,9 +50,16 @@ class Target:
         return int(port_raw.split(':')[-1])
 
     def wait_for_shutdown(self):
+        '''
+        Wait until the target completed fully.
+        '''
         self.executor.join()
 
     def start(self, func_call: str) -> bool:
+        '''
+        Start target debugging. Resolve the function to be debugged, find its
+        OID and eventually start a thread calling it.
+        '''
         if '(' not in func_call or ')' not in func_call:
             logger.error(f'Function call seems incomplete: {func_call}')
             return False
@@ -75,13 +91,13 @@ class Target:
         arguments and returns the session ID once the debugger started.
         '''
         self.oid = func_oid
-        self.db.run_sql(f'SELECT * FROM pldbg_oid_debug({func_oid})')
+        self.database.run_sql(f'SELECT * FROM pldbg_oid_debug({func_oid})')
 
         while True:
             logger.debug('Starting target function')
 
             try:
-                result = self.db.run_sql(f'SELECT * FROM {func_call}',
+                result = self.database.run_sql(f'SELECT * FROM {func_call}',
                                          fetch_result=True,
                                          notice_queue=self.notice_queue)
 
@@ -122,7 +138,7 @@ class Target:
         Cache all PL/pgSQL functions and their OIDs.
         '''
         logger.info('Caching all PL/pgSQL functions')
-        pgsql_functions = self.db.run_sql('''
+        pgsql_functions = self.database.run_sql('''
             SELECT
                 p.oid::regprocedure AS name
               , p.oid AS oid

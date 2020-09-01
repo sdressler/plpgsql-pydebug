@@ -81,11 +81,15 @@ class DB:
                 if fetch_result:
                     return cur.fetchall()
 
+                return []
+
         except psycopg2.errors.SyntaxError:
             logger.exception('SQL invalid')
+            return []
 
         except psycopg2.errors.ConnectionFailure:
             logger.exception('Connection failure')
+            return []
 
     @classmethod
     def _send_notices(cls, async_conn, notice_queue: Optional[Queue]):
