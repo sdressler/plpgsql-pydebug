@@ -19,7 +19,7 @@ Command = namedtuple('Command', ['func', 'prereq', 'return_func'])
 
 
 COMMANDS = {
-    'run'     : Command('start_debug_session', None, None),
+    'run'     : Command('_start_debug_session_wrapper', None, None),
     'stop'    : Command('stop_debug_session', None, None),
     'continue': Command('proxy.cont', 'active_session', None),
     'vars'    : Command('proxy.get_variables', 'active_session', pprint),
@@ -58,13 +58,17 @@ class Debugger:
         '''
         return (self.proxy) and (self.target)
 
-    def start_debug_session(self, *args):
+    def _start_debug_session_wrapper(self, *args):
+        func_call = args[0]
+        target = Target(self.database.dsn)
+        proxy = Proxy(self.database.dsn)
+        self._start_debug_session(func_call, target, proxy)
+
+    def _start_debug_session(self, func_call: str, target: Target, proxy: Proxy):
         '''
         Start a new debugging session from scratch.
         '''
-        func_call = args[0]
-
-        self.target = Target(self.database.dsn)
+        self.target = target
         if not self.target.start(func_call):
             logger.error('Could not start target')
             self.target.cleanup()
@@ -73,7 +77,7 @@ class Debugger:
 
         logger.debug('Started target')
 
-        self.proxy = Proxy(self.database.dsn)
+        self.proxy = proxy
         self.proxy.attach(self.target.port)
         logger.debug('Proxy started')
 
@@ -103,6 +107,7 @@ class Debugger:
             line_number = args[0]
             return self.proxy.set_breakpoint(self.target.oid, line_number)
 
+        # This is not enough here
         except IndexError:
             logger.error('Could not get breakpoint line number.')
 
