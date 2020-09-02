@@ -1,6 +1,10 @@
 
 import pytest
 
+
+from psycopg2.errors import QueryCanceled
+
+
 from lib.target import Target, SQLFunction
 
 
@@ -71,3 +75,49 @@ def test_get_all_functions(target_fixture):
         SQLFunction('func1', 1),
         SQLFunction('func2', 2)
     ]
+
+
+@pytest.mark.parametrize('call,result', [
+    ('foobar', False),
+    ('foobar(', False),
+    ('foobar)', False),
+    ('foobar()', True),
+    ('()', False),
+    ('foobar(123, 456)', True),
+    ('foo_bar(arg)', True)
+])
+def test_assert_valid_function_call(call, result):
+    assert Target.assert_valid_function_call(call) == result
+
+
+def test_start_invalid_func(target_fixture):
+    assert not target_fixture.start('GARBAGE')
+
+
+def test_start_no_func_oid(mocker, target_fixture):
+    target_fixture._get_func_oid_by_name = mocker.MagicMock(return_value=None)
+    assert not target_fixture.start('some_valid_call(bla)')
+
+
+def test_start_valid_func(mocker, target_fixture):
+    target_fixture.notice_queue.get = mocker.MagicMock(return_value='FOO: 42')
+    target_fixture._run_executor_thread = mocker.MagicMock()
+    target_fixture._get_func_oid_by_name = mocker.MagicMock(return_value=100)
+
+    assert target_fixture.start('func_call(arg)')
+
+
+def test_run(mocker, target_fixture):
+    side_effects = [None, 'foo', QueryCanceled]
+    target_fixture.database.run_sql.side_effect = iter(side_effects)
+    target_fixture._run('hello_world(2,3)', 123)
+
+    target_fixture.database.run_sql.assert_has_calls([
+        mocker.call('SELECT * FROM pldbg_oid_debug(123)'),
+        mocker.call('SELECT * FROM hello_world(2,3)',
+                    fetch_result=True,
+                    notice_queue=target_fixture.notice_queue),
+        mocker.call('SELECT * FROM hello_world(2,3)',
+                    fetch_result=True,
+                    notice_queue=target_fixture.notice_queue)
+    ])

@@ -3,6 +3,8 @@ This module controls the debugging target. It is responsible for setting the
 initial breakpoint and starting the function to be debugged.
 '''
 
+import re
+
 from collections import namedtuple
 from queue import Queue
 from threading import Thread
@@ -55,12 +57,22 @@ class Target:
         '''
         self.executor.join()
 
+    def _run_executor_thread(self, func_call, func_oid):
+        self.executor = Thread(target=self._run, args=(func_call, func_oid))
+        self.executor.daemon = True
+        self.executor.start()
+
+    @classmethod
+    def assert_valid_function_call(cls, func_call: str) -> bool:
+        return re.match(r'[_a-zA-Z]+\([^\)]*\)(\.[^\)]*\))?', func_call) is not None
+
     def start(self, func_call: str) -> bool:
         '''
         Start target debugging. Resolve the function to be debugged, find its
         OID and eventually start a thread calling it.
         '''
-        if '(' not in func_call or ')' not in func_call:
+
+        if not Target.assert_valid_function_call(func_call):
             logger.error(f'Function call seems incomplete: {func_call}')
             return False
 
@@ -73,10 +85,7 @@ class Target:
             return False
 
         logger.debug(f'Function OID is: {func_oid}')
-
-        self.executor = Thread(target=self._run, args=(func_call, func_oid))
-        self.executor.daemon = True
-        self.executor.start()
+        self._run_executor_thread(func_oid, func_oid)
 
         # Wait here until the executor started
         logger.debug('Waiting for port')
