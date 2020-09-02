@@ -105,7 +105,8 @@ class Debugger:
         '''
         try:
             line_number = args[0]
-            return self.proxy.set_breakpoint(self.target.oid, line_number)
+            result = self.proxy.set_breakpoint(self.target.oid, line_number)
+            return result
 
         # This is not enough here
         except IndexError:
@@ -134,17 +135,23 @@ class Debugger:
         except KeyError:
             logger.error(f'Cannot find definition for "{command_name}"')
 
-    def execute_command(self, command):
-        '''
-        Parse and execute a given command.
-        '''
-        logger.debug(f'Executing: {command}')
+    @classmethod
+    def _parse_command(cls, command):
         command, _, args = command.partition(' ')
 
         args = args.split(' ')
         if args == ['']:
             args = []
 
+        return command, args
+
+    def execute_command(self, command):
+        '''
+        Parse and execute a given command.
+        '''
+        command, args = Debugger._parse_command(command)
+
+        logger.debug(f'Executing: {command}')
         self._run_command(command, args)
 
         if self.active_session():

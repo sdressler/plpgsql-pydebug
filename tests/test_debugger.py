@@ -93,7 +93,7 @@ def test_set_breakpoint_wrapper(debugger_fixture_active):
     debugger_fixture_active.proxy.set_breakpoint.assert_called_once_with(42, 100)
 
 
-def test_set_breakpoint_wrapper(mocker, debugger_fixture_active):
+def test_set_breakpoint_wrapper_error(mocker, debugger_fixture_active):
     log_error_mock = mocker.patch('loguru.logger.error')
     debugger_fixture_active._set_breakpoint_wrapper()
     log_error_mock.assert_called_once()
@@ -104,7 +104,38 @@ def test_run_command(debugger_fixture_active):
     debugger_fixture_active.proxy.get_variables.assert_called_once()
 
 
+@pytest.mark.parametrize('alias', ['abort', 'exit', 'quit', 'stop'])
+def test_run_command_stop_aliases(mocker, debugger_fixture_active, alias):
+    stop_debug_session_mock = mocker.patch('lib.debugger.Debugger.stop_debug_session')
+    debugger_fixture_active._run_command(alias, [])
+    stop_debug_session_mock.assert_called_once()
+
+
 def test_run_command_failure(mocker, debugger_fixture_active):
     log_error_mock = mocker.patch('loguru.logger.error')
     debugger_fixture_active._run_command('klhasfassdashklas', [])
     log_error_mock.assert_called_once()
+
+
+@pytest.mark.parametrize('full_command,exp_command,exp_args', [
+    ('dosomething', 'dosomething', []),
+    ('a bla', 'a', ['bla']),
+    ('b.a arg arg', 'b.a', ['arg', 'arg']),
+])
+def test_parse_command(full_command, exp_command, exp_args):
+    command, args = Debugger._parse_command(full_command)
+    assert command == exp_command
+    assert args == exp_args
+
+
+def test_execute_command(mocker, debugger_fixture):
+    run_cmd_mock = mocker.patch('lib.debugger.Debugger._run_command')
+    debugger_fixture.execute_command('do something')
+    run_cmd_mock.assert_called_once_with('do', ['something'])
+
+
+def test_execute_command_active(mocker, debugger_fixture_active):
+    run_cmd_mock = mocker.patch('lib.debugger.Debugger._run_command')
+    debugger_fixture_active.execute_command('do something')
+    run_cmd_mock.assert_called_once_with('do', ['something'])
+    debugger_fixture_active.target.get_notices.assert_called_once()
