@@ -2,6 +2,7 @@
 import pytest
 
 import psycopg2
+from psycopg2.extensions import POLL_OK, POLL_READ, POLL_WRITE
 
 from lib.db import DB
 
@@ -102,3 +103,40 @@ def test_send_notices(mocker, dbmock):
     queue_mock.put_nowait.assert_has_calls([mocker.call(x) for x in TEST_NOTICES])
 
     assert not dbmock._conn.notices
+
+
+@pytest.mark.parametrize('state_sequence,call_sequence', [
+    ([POLL_OK], ['poll']),
+    ([POLL_READ, POLL_OK], ['poll', 'fileno', 'poll']),
+    ([POLL_READ, POLL_WRITE, POLL_OK], ['poll', 'fileno', 'poll', 'fileno', 'poll']),
+])
+def test_async_conn_wait(mocker, state_sequence, call_sequence):
+    mocker.patch('select.select')
+    send_notices_mock = mocker.patch('lib.db.DB._send_notices')
+    async_conn = mocker.MagicMock()
+    async_conn.poll.side_effect = iter(state_sequence)
+
+    DB._async_conn_wait(async_conn)
+
+    expected_call_sequence = [f'{call}()' for call in call_sequence]
+    actuall_call_sequence = [str(call).split('.')[1] for call in async_conn.method_calls]
+    assert actuall_call_sequence == expected_call_sequence
+    send_notices_mock.assert_not_called()
+
+    # Again but with notices_queue
+    notices_queue = mocker.MagicMock()
+    async_conn = mocker.MagicMock()
+    async_conn.poll.side_effect = iter(state_sequence)
+
+    DB._async_conn_wait(async_conn, notices_queue)
+
+    actuall_call_sequence = [str(call).split('.')[1] for call in async_conn.method_calls]
+    assert actuall_call_sequence == expected_call_sequence
+    assert send_notices_mock.call_count == len(state_sequence)
+
+
+def test_async_conn_wait_err(mocker):
+    async_conn = mocker.MagicMock()
+    async_conn.poll.return_value = 'GARBAGE'
+    with pytest.raises(psycopg2.OperationalError):
+        DB._async_conn_wait(async_conn)

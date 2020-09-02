@@ -92,15 +92,11 @@ class DB:
             return []
 
     @classmethod
-    def _send_notices(cls, async_conn, notice_queue: Optional[Queue]):
+    def _send_notices(cls, async_conn, notice_queue: Queue):
         '''
         Handler to capture all notices from the current connection. Pushes it
-        into the provided queue. If the Queue is None, this function silently
-        returns. The connections notices are cleared at the end.
+        into the provided queue. The connections notices are cleared at the end.
         '''
-        if not notice_queue:
-            return
-
         for notice in async_conn.notices:
             notice_queue.put_nowait(notice)
 
@@ -116,15 +112,18 @@ class DB:
         while True:
             state = async_conn.poll()
             if state == psycopg2.extensions.POLL_OK:
-                cls._send_notices(async_conn, notice_queue)
+                if notice_queue:
+                    cls._send_notices(async_conn, notice_queue)
                 break
 
             if state == psycopg2.extensions.POLL_WRITE:
-                cls._send_notices(async_conn, notice_queue)
+                if notice_queue:
+                    cls._send_notices(async_conn, notice_queue)
                 select.select([], [async_conn.fileno()], [])
 
             elif state == psycopg2.extensions.POLL_READ:
-                cls._send_notices(async_conn, notice_queue)
+                if notice_queue:
+                    cls._send_notices(async_conn, notice_queue)
                 select.select([async_conn.fileno()], [], [])
 
             else:
