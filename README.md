@@ -18,7 +18,7 @@ typically install it from the main PG repository.
 * Output could be prettier / more readable.
 * Not everything tested.
 * Error handling might be incomplete, it could bail out and leave connections open.
-* `source`, `br.set` commands do not yet work with other functions than the
+* `source`, `brset` commands do not yet work with other functions than the
   active target functions. In other words: you can use them only on functions
   which do not call other functions respectively you can step into them but
   not show their source or set breakpoints.
@@ -39,7 +39,7 @@ checking as of now, so you'll maybe run into trouble here and there.
 * `source` show the source of the current target function. Does not yet take
   into account that you could have nested functions.
 * `stack` show the current stack.
-* `br.show` show all active breakpoints.
-* `br.set <line>` set a breakpoint in the current target function at the given
+* `brshow` show all active breakpoints.
+* `brset <line>` set a breakpoint in the current target function at the given
   line. Caution: does not work with nested functions yet.
 * `exit` exits the debugger.

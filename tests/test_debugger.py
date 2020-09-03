@@ -117,25 +117,14 @@ def test_run_command_failure(mocker, debugger_fixture_active):
     log_error_mock.assert_called_once()
 
 
-@pytest.mark.parametrize('full_command,exp_command,exp_args', [
-    ('dosomething', 'dosomething', []),
-    ('a bla', 'a', ['bla']),
-    ('b.a arg arg', 'b.a', ['arg', 'arg']),
-])
-def test_parse_command(full_command, exp_command, exp_args):
-    command, args = Debugger._parse_command(full_command)
-    assert command == exp_command
-    assert args == exp_args
-
-
 def test_execute_command(mocker, debugger_fixture):
     run_cmd_mock = mocker.patch('lib.debugger.Debugger._run_command')
-    debugger_fixture.execute_command('do something')
+    debugger_fixture.execute_command('do', ['something'])
     run_cmd_mock.assert_called_once_with('do', ['something'])
 
 
 def test_execute_command_active(mocker, debugger_fixture_active):
     run_cmd_mock = mocker.patch('lib.debugger.Debugger._run_command')
-    debugger_fixture_active.execute_command('do something')
+    debugger_fixture_active.execute_command('do', ['something'])
     run_cmd_mock.assert_called_once_with('do', ['something'])
     debugger_fixture_active.target.get_notices.assert_called_once()

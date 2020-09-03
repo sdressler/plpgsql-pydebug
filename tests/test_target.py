@@ -84,7 +84,9 @@ def test_get_all_functions(target_fixture):
     ('foobar()', True),
     ('()', False),
     ('foobar(123, 456)', True),
-    ('foo_bar(arg)', True)
+    ('foo_bar(arg)', True),
+    ('foo_bar_baz(3)', True),
+    ('example_func_1(2)', True),
 ])
 def test_assert_valid_function_call(call, result):
     assert Target.assert_valid_function_call(call) == result

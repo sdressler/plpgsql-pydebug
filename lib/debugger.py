@@ -3,33 +3,15 @@ This is the main debugger module. It receives commands to execute and
 distributes them accordingly to either the target or the proxy.
 '''
 
-from collections import namedtuple
 from functools import reduce as f_reduce
-from pprint import pprint
 
 from loguru import logger
 
+from lib.commands import COMMANDS
 from lib.db import DB
-from lib.formatters import print_source, print_notices
+from lib.formatters import print_notices
 from lib.target import Target
 from lib.proxy import Proxy
-
-
-Command = namedtuple('Command', ['func', 'prereq', 'return_func'])
-
-
-COMMANDS = {
-    'run'     : Command('_start_debug_session_wrapper', None, None),
-    'stop'    : Command('stop_debug_session', None, None),
-    'continue': Command('proxy.cont', 'active_session', None),
-    'vars'    : Command('proxy.get_variables', 'active_session', pprint),
-    'si'      : Command('proxy.step_into', 'active_session', print),
-    'so'      : Command('proxy.step_over', 'active_session', print),
-    'source'  : Command('_get_source_wrapper', 'active_session', print_source),
-    'stack'   : Command('proxy.get_stack', 'active_session', pprint),
-    'br.show' : Command('proxy.get_breakpoints', 'active_session', pprint),
-    'br.set'  : Command('_set_breakpoint_wrapper', 'active_session', None),
-}
 
 
 def rgetattr(obj, attr, *args):
@@ -120,7 +102,7 @@ class Debugger:
             command_name = 'stop'
 
         try:
-            command = COMMANDS[command_name]
+            command = COMMANDS[command_name]['command']
 
             if command.prereq:
                 assert getattr(self, command.prereq)()
@@ -135,23 +117,12 @@ class Debugger:
         except KeyError:
             logger.error(f'Cannot find definition for "{command_name}"')
 
-    @classmethod
-    def _parse_command(cls, command):
-        command, _, args = command.partition(' ')
 
-        args = args.split(' ')
-        if args == ['']:
-            args = []
-
-        return command, args
-
-    def execute_command(self, command):
+    def execute_command(self, command, args):
         '''
         Parse and execute a given command.
         '''
-        command, args = Debugger._parse_command(command)
-
-        logger.debug(f'Executing: {command}')
+        logger.debug(f'Executing: {command} with args {args}')
         self._run_command(command, args)
 
         if self.active_session():

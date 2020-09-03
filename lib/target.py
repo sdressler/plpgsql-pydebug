@@ -64,7 +64,7 @@ class Target:
 
     @classmethod
     def assert_valid_function_call(cls, func_call: str) -> bool:
-        return re.match(r'[_a-zA-Z]+\([^\)]*\)(\.[^\)]*\))?', func_call) is not None
+        return re.match(r'[_a-zA-Z0-9]+\([^\)]*\)(\.[^\)]*\))?', func_call) is not None
 
     def start(self, func_call: str) -> bool:
         '''
@@ -72,6 +72,7 @@ class Target:
         OID and eventually start a thread calling it.
         '''
 
+        print(func_call)
         if not Target.assert_valid_function_call(func_call):
             logger.error(f'Function call seems incomplete: {func_call}')
             return False
@@ -85,7 +86,7 @@ class Target:
             return False
 
         logger.debug(f'Function OID is: {func_oid}')
-        self._run_executor_thread(func_oid, func_oid)
+        self._run_executor_thread(func_call, func_oid)
 
         # Wait here until the executor started
         logger.debug('Waiting for port')

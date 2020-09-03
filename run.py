@@ -5,30 +5,52 @@ from sys import stdout
 
 from loguru import logger
 from prompt_toolkit import PromptSession
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 from lib.debugger import Debugger
+from lib.commands import CommandCompleter, parse_command
+
 
 PROMPT='(pldbg) '
 
 
 def main(args: Namespace):
+    completer = CommandCompleter()
     debugger = Debugger(args.dsn)
     session = PromptSession()
 
     while True:
         try:
-            text = session.prompt(PROMPT)
-            debugger.execute_command(text)
+            text = session.prompt(PROMPT, completer=completer,
+                                  auto_suggest=AutoSuggestFromHistory())
+
             if text in ('exit', 'quit'):
                 break
+
+            elif text == 'help':
+                logger.info('Help goes here')
+
+            else:
+                command, args = parse_command(text)
+
+                if command not in completer.command_keys:
+                    logger.error(f'Command {text} not found.')
+                    continue
+
+                debugger.execute_command(command, args)
 
         except KeyboardInterrupt:
             print('To exit type "exit", "quit", or hit Ctrl-D\n')
             continue
 
-        except (EOFError, Exception):
+        except EOFError:
+            logger.info('Exiting.')
             debugger.execute_command('abort')
             break
+
+        except Exception:
+            logger.exception('That was unexpected.')
+
 
 if __name__ == '__main__':
     args_to_parse = ArgumentParser()
