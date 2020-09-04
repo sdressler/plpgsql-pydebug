@@ -1,6 +1,6 @@
 # PL/pgSQL PyDebug
 
-This is a CLI debugg for PL/pgSQL. It is in its early stages and rather
+This is a CLI debugger for PL/pgSQL. It is in its early stages and rather
 archaic. It does make use of the `pldbgapi` extension for PostgreSQL. You can
 typically install it from the main PG repository.
 
