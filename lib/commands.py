@@ -4,6 +4,7 @@ from collections import namedtuple, OrderedDict
 from pprint import pprint
 from typing import Generator, List, Tuple
 
+from loguru import logger
 from prompt_toolkit.document import Document
 from prompt_toolkit.completion import Completer, Completion, CompleteEvent
 
@@ -37,11 +38,11 @@ COMMANDS = OrderedDict({
         'help': 'Run a function call and attach'
     },
     'si': {
-        'command': Command('proxy.step_into', 'active_session', print),
+        'command': Command('proxy.step_into', 'active_session', logger.info),
         'help': 'Step into the next function or pause at the next executable statement'
     },
     'so': {
-        'command': Command('proxy.step_over', 'active_session', print),
+        'command': Command('proxy.step_over', 'active_session', logger.info),
         'help': 'Step over the next function and pause at the next executable statement'
     },
     'source': {

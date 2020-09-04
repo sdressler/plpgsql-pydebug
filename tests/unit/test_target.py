@@ -1,11 +1,12 @@
 
 import pytest
 
-
 from psycopg2.errors import QueryCanceled
 
+import lib.helpers as lib_helpers
 
-from lib.target import Target, SQLFunction
+from lib.helpers import SQLFunction
+from lib.target import Target
 
 
 @pytest.fixture
@@ -54,29 +55,6 @@ def test_parse_func_call(func_call, func_name, func_args):
     assert args == func_args
 
 
-@pytest.mark.parametrize('func_name,oid', [
-    ('foobar', 1),
-    ('match', 42),
-    ('does_not_exist', None)
-])
-def test_func_oid_by_name(mocker, target_fixture, func_name, oid):
-    target_fixture._get_all_functions = mocker.MagicMock(return_value=[
-        SQLFunction('foobar(integer)', 1),
-        SQLFunction('foobar(varchar)', 2),
-        SQLFunction('match(integer, text)', 42)
-    ])
-    assert target_fixture._get_func_oid_by_name(func_name) == oid
-
-
-def test_get_all_functions(target_fixture):
-    target_fixture.database.run_sql.return_value = [('func1', 1), ('func2', 2)]
-    all_functions = target_fixture._get_all_functions()
-    assert all_functions == [
-        SQLFunction('func1', 1),
-        SQLFunction('func2', 2)
-    ]
-
-
 @pytest.mark.parametrize('call,result', [
     ('foobar', False),
     ('foobar(', False),
@@ -97,14 +75,14 @@ def test_start_invalid_func(target_fixture):
 
 
 def test_start_no_func_oid(mocker, target_fixture):
-    target_fixture._get_func_oid_by_name = mocker.MagicMock(return_value=None)
+    mocker.patch('lib.target.get_func_oid_by_name', return_value=None)
     assert not target_fixture.start('some_valid_call(bla)')
 
 
 def test_start_valid_func(mocker, target_fixture):
+    mocker.patch('lib.target.get_func_oid_by_name', return_value=100)
     target_fixture.notice_queue.get = mocker.MagicMock(return_value='FOO: 42')
     target_fixture._run_executor_thread = mocker.MagicMock()
-    target_fixture._get_func_oid_by_name = mocker.MagicMock(return_value=100)
 
     assert target_fixture.start('func_call(arg)')
 

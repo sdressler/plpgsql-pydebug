@@ -2,9 +2,12 @@
 import os
 
 from glob import glob
+from io import StringIO
 
 import psycopg2
 import pytest
+
+from loguru import logger
 
 from lib.debugger import Debugger
 
@@ -29,8 +32,12 @@ def _execute_sql_no_db(dsn, sql):
 
 @pytest.fixture(scope="session")
 def debugger_instance():
-    dsn = DSN
+    class DebuggerWrapper(Debugger):
+        def __init__(self, dsn):
+            super().__init__(dsn)
+            self.log_sink = StringIO()
 
+    dsn = DSN
     _execute_sql_no_db(dsn, 'DROP DATABASE IF EXISTS test_plpgsql_pydebug')
     _execute_sql_no_db(dsn, 'CREATE DATABASE test_plpgsql_pydebug')
 
@@ -40,7 +47,12 @@ def debugger_instance():
             sql = sql_file.read()
             _execute_sql(dsn, sql)
 
-    debugger = Debugger(dsn)
+    debugger = DebuggerWrapper(dsn)
+    logger.configure(**{
+        'handlers': [
+            {'sink': debugger.log_sink, 'serialize': True}
+        ]
+    })
     yield debugger
 
     # Teardown code from here on

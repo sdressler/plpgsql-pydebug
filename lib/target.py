@@ -14,9 +14,8 @@ from loguru import logger
 from psycopg2.errors import QueryCanceled
 
 from lib.db import DB
+from lib.helpers import get_func_oid_by_name
 
-
-SQLFunction = namedtuple('SQLFunction', ['name', 'oid'])
 
 
 class Target:
@@ -78,7 +77,7 @@ class Target:
             return False
 
         func_name, func_args = Target._parse_func_call(func_call)
-        func_oid = self._get_func_oid_by_name(func_name)
+        func_oid = get_func_oid_by_name(self.database, func_name)
         if not func_oid:
             logger.error('Function OID not found. Either function is not '
                          'defined or there are multiple with the same name '
@@ -131,31 +130,3 @@ class Target:
         func_call = func_call.split(',')
         return func_call[0], func_call[1:]
 
-    def _get_func_oid_by_name(self, func_name) -> Optional[int]:
-        '''
-        Takes a function name and returns the matching OID. Currently does not
-        work for overloaded functions.
-        '''
-        sql_functions = self._get_all_functions()
-        for item in sql_functions:
-            if func_name == item.name.partition('(')[0]:
-                return item.oid
-
-        return None
-
-    def _get_all_functions(self) -> List[SQLFunction]:
-        '''
-        Cache all PL/pgSQL functions and their OIDs.
-        '''
-        logger.info('Caching all PL/pgSQL functions')
-        pgsql_functions = self.database.run_sql('''
-            SELECT
-                p.oid::regprocedure AS name
-              , p.oid AS oid
-            FROM pg_proc p
-            JOIN pg_namespace n ON p.pronamespace = n.oid
-            JOIN pg_language l ON p.prolang = l.oid
-            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-              AND l.lanname = 'plpgsql'
-        ''', fetch_result=True)
-        return [SQLFunction(name, oid) for name, oid in pgsql_functions]
