@@ -2,9 +2,10 @@
 
 from collections import namedtuple, OrderedDict
 from pprint import pprint
-from typing import List, Tuple
+from typing import Generator, List, Tuple
 
-from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.document import Document
+from prompt_toolkit.completion import Completer, Completion, CompleteEvent
 
 from lib.formatters import print_source
 
@@ -76,7 +77,8 @@ class CommandCompleter(Completer):
     def __init__(self):
         self.command_keys = list(COMMANDS.keys())
 
-    def get_completions(self, document, complete_event):
+    def get_completions(self, document: Document,
+                        complete_event: CompleteEvent) -> Generator[Completion, None, None]:
         check = document.text
         matches = [key for key in self.command_keys if key.startswith(check)]
         for match in matches:
