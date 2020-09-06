@@ -3,5 +3,6 @@ python:
   - "3.7"
 install:
   - pip install -r requirements.txt
+  - pip install pytest==6.0.1 pytest-mock==3.3.1 pytest-cov==2.10.1
 script:
   - "PYTHONPATH=. pytest tests/unit"
