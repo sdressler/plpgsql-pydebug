@@ -10,6 +10,7 @@ from loguru import logger
 from lib.commands import COMMANDS
 from lib.db import DB
 from lib.formatters import print_notices
+from lib.helpers import get_all_functions
 from lib.target import Target
 from lib.proxy import Proxy
 
@@ -39,6 +40,10 @@ class Debugger:
         Check if a debugging session is active or not.
         '''
         return (self.proxy) and (self.target)
+
+    def show_all_functions(self):
+        functions = get_all_functions(self.database)
+        logger.info(functions)
 
     def _start_debug_session_wrapper(self, *args):
         func_call = args[0]

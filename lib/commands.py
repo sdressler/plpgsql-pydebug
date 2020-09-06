@@ -30,6 +30,10 @@ COMMANDS = OrderedDict({
     'exit': {
         'help': 'Exit the debugger'
     },
+    'func': {
+        'command': Command('show_all_functions', None, None),
+        'help': 'Show all functions'
+    },
     'help': {
         'help': 'Show help'
     },
