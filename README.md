@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/sdressler/plpgsql-pydebug.svg?branch=main)](https://travis-ci.org/sdressler/plpgsql-pydebug)
+
 # PL/pgSQL PyDebug
 
 This is a CLI debugger for PL/pgSQL. It is in its early stages and rather
