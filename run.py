@@ -8,7 +8,8 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 from lib.debugger import Debugger
-from lib.commands import CommandCompleter, parse_command
+from lib.commands import COMMANDS, CommandCompleter, parse_command
+from lib.formatters import print_help
 
 
 PROMPT='(pldbg) '
@@ -27,8 +28,8 @@ def main(args: Namespace):
             if text in ('exit', 'quit'):
                 break
 
-            elif text == 'help':
-                logger.info('Help goes here')
+            elif text in ('help', 'h', '?'):
+                print_help(COMMANDS.help)
 
             else:
                 command, args = parse_command(text)

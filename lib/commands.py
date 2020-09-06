@@ -14,7 +14,17 @@ from lib.formatters import print_source
 Command = namedtuple('Command', ['func', 'prereq', 'return_func'])
 
 
-COMMANDS = OrderedDict({
+class Commands(OrderedDict):
+    def __init__(self, command_list: dict):
+        super().__init__(command_list)
+        logger.info(self.keys())
+
+    @property
+    def help(self):
+        return [(key, command['help']) for key, command in self.items()]
+
+
+COMMANDS = Commands({
     'brshow': {
         'command': Command('proxy.get_breakpoints', 'active_session', pprint),
         'help': 'Show all breakpoints'
@@ -35,6 +45,7 @@ COMMANDS = OrderedDict({
         'help': 'Show all functions'
     },
     'help': {
+        # This should be intercepted in run.py
         'help': 'Show help'
     },
     'run': {

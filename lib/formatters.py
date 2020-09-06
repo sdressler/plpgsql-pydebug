@@ -1,7 +1,12 @@
 
-from typing import List
+from typing import List, Tuple
 
 from loguru import logger
+
+
+def print_help(help: List[Tuple[str, str]]):
+    for command, help in help:
+        print(f'{command:8} -> {help}')
 
 
 def print_source(src: str):
