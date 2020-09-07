@@ -2,11 +2,12 @@
 from typing import List, Tuple
 
 from loguru import logger
+from prompt_toolkit import print_formatted_text, HTML
 
 
 def print_help(help: List[Tuple[str, str]]):
     for command, help in help:
-        print(f'{command:8} -> {help}')
+        print_formatted_text(HTML(f'<b>{command:8}</b>: {help}'))
 
 
 def print_source(src: str):
